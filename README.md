@@ -35,6 +35,19 @@ imm --version
 The Debian package installs `/usr/bin/imm`, so no extra `PATH` setup is needed
 on a normal Ubuntu installation.
 
+### macOS
+
+Install through Homebrew:
+
+```bash
+brew tap susu3304/imm
+brew install imm
+imm --version
+```
+
+The formula installs `imm` into Homebrew's `bin` directory, which is already on
+`PATH` for a normal Homebrew setup.
+
 ## Automation
 
 `.github/workflows/build-installers.yml` rebuilds installers from the upstream
@@ -53,6 +66,10 @@ For immediate rebuilds on every upstream IMM push, copy
 `INSTALLER_REPO_DISPATCH_TOKEN` there. The token needs write access to this
 installer repository so it can create a repository dispatch event.
 
+macOS Homebrew support is published to
+[`susu3304/homebrew-imm`](https://github.com/susu3304/homebrew-imm). The
+installer workflow updates that tap after each successful release.
+
 ## Repository Secrets
 
 Required for signed APT metadata:
@@ -63,3 +80,8 @@ Required for signed APT metadata:
 If the signing key is missing, the workflow still creates `.deb` and MSI release
 artifacts, but the APT repository is emitted unsigned and should not be used as
 the default install path.
+
+Required for automatic Homebrew tap updates:
+
+- `HOMEBREW_TAP_DEPLOY_KEY`: SSH private deploy key with write access to
+  `susu3304/homebrew-imm`.

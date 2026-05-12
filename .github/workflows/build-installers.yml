@@ -30,6 +30,7 @@ concurrency:
 
 env:
   IMM_REPOSITORY: susu3304/InsaneMarmotMatrixLanguage
+  HOMEBREW_TAP_REPOSITORY: susu3304/homebrew-imm
 
 jobs:
   prepare:
@@ -158,12 +159,53 @@ jobs:
           path: dist/*.msi
           if-no-files-found: error
 
+  macos-tarball:
+    needs: prepare
+    if: needs.prepare.outputs.should_release == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-13
+            target: x86_64-apple-darwin
+            artifact_arch: x64
+          - runner: macos-14
+            target: aarch64-apple-darwin
+            artifact_arch: arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Checkout packaging repository
+        uses: actions/checkout@v4
+        with:
+          path: packaging
+
+      - name: Checkout IMM source
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.IMM_REPOSITORY }}
+          ref: ${{ needs.prepare.outputs.upstream_sha }}
+          path: imm-src
+
+      - name: Install Rust target
+        run: rustup target add "${{ matrix.target }}"
+
+      - name: Build macOS tarball
+        run: packaging/scripts/build-macos-tarball.sh imm-src "${{ matrix.target }}" dist
+
+      - name: Upload macOS tarball
+        uses: actions/upload-artifact@v4
+        with:
+          name: imm-macos-${{ matrix.artifact_arch }}
+          path: dist/imm-macos-${{ matrix.artifact_arch }}.tar.gz
+          if-no-files-found: error
+
   publish:
     runs-on: ubuntu-latest
     needs:
       - prepare
       - linux-deb
       - windows-msi
+      - macos-tarball
     if: needs.prepare.outputs.should_release == 'true'
     environment:
       name: github-pages
@@ -208,21 +250,59 @@ jobs:
           SHORT_SHA: ${{ needs.prepare.outputs.short_sha }}
         run: |
           set -euo pipefail
-          release_notes="Built from susu3304/InsaneMarmotMatrixLanguage@${UPSTREAM_SHA}. The Windows MSI installs imm.exe and adds it to PATH. The Ubuntu package installs /usr/bin/imm."
+          release_notes="Built from susu3304/InsaneMarmotMatrixLanguage@${UPSTREAM_SHA}. Windows MSI installs imm.exe and adds it to PATH. Ubuntu APT installs /usr/bin/imm. macOS tarballs feed the Homebrew tap."
           if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release edit "$RELEASE_TAG" \
               --repo "$GITHUB_REPOSITORY" \
               --title "$RELEASE_NAME" \
               --notes "$release_notes"
-            gh release upload "$RELEASE_TAG" dist/*.deb dist/*.msi \
+            gh release upload "$RELEASE_TAG" dist/*.deb dist/*.msi dist/*.tar.gz \
               --repo "$GITHUB_REPOSITORY" \
               --clobber
           else
-            gh release create "$RELEASE_TAG" dist/*.deb dist/*.msi \
+            gh release create "$RELEASE_TAG" dist/*.deb dist/*.msi dist/*.tar.gz \
               --repo "$GITHUB_REPOSITORY" \
               --title "$RELEASE_NAME" \
               --notes "$release_notes"
           fi
+
+      - name: Update Homebrew tap
+        env:
+          HOMEBREW_TAP_DEPLOY_KEY: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
+          RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
+          FORMULA_VERSION: ${{ needs.prepare.outputs.deb_version }}
+        run: |
+          set -euo pipefail
+          if [ -z "${HOMEBREW_TAP_DEPLOY_KEY:-}" ]; then
+            echo "HOMEBREW_TAP_DEPLOY_KEY is not set; skipping tap update"
+            exit 0
+          fi
+
+          install -d -m 0700 ~/.ssh
+          printf '%s\n' "$HOMEBREW_TAP_DEPLOY_KEY" > ~/.ssh/imm_homebrew_tap
+          chmod 600 ~/.ssh/imm_homebrew_tap
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+          GIT_SSH_COMMAND="ssh -i ~/.ssh/imm_homebrew_tap -o IdentitiesOnly=yes" \
+            git clone "git@github.com:${HOMEBREW_TAP_REPOSITORY}.git" tap
+
+          packaging/scripts/update-homebrew-formula.sh \
+            "$RELEASE_TAG" \
+            "$FORMULA_VERSION" \
+            dist/imm-macos-arm64.tar.gz \
+            dist/imm-macos-x64.tar.gz \
+            tap/Formula/imm.rb
+
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "Homebrew formula already up to date"
+            exit 0
+          fi
+          git add Formula/imm.rb
+          git commit -m "Update IMM formula to ${FORMULA_VERSION}"
+          GIT_SSH_COMMAND="ssh -i ~/.ssh/imm_homebrew_tap -o IdentitiesOnly=yes" git push origin main
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
