@@ -20,10 +20,20 @@ cp "$deb_file" "$out_dir/pool/main/i/imm/"
 (
   cd "$out_dir"
   dpkg-scanpackages --arch "$arch" pool /dev/null \
-    | gzip -9c > "dists/$codename/$component/binary-$arch/Packages.gz"
+    > "dists/$codename/$component/binary-$arch/Packages"
+  gzip -9c < "dists/$codename/$component/binary-$arch/Packages" \
+    > "dists/$codename/$component/binary-$arch/Packages.gz"
 
   if command -v apt-ftparchive >/dev/null 2>&1; then
-    apt-ftparchive release "dists/$codename" > "dists/$codename/Release"
+    apt-ftparchive \
+      -o "APT::FTPArchive::Release::Origin=IMM" \
+      -o "APT::FTPArchive::Release::Label=IMM" \
+      -o "APT::FTPArchive::Release::Suite=$codename" \
+      -o "APT::FTPArchive::Release::Codename=$codename" \
+      -o "APT::FTPArchive::Release::Architectures=$arch" \
+      -o "APT::FTPArchive::Release::Components=$component" \
+      -o "APT::FTPArchive::Release::Description=IMM APT repository" \
+      release "dists/$codename" > "dists/$codename/Release"
   else
     cat > "dists/$codename/Release" <<RELEASE
 Origin: IMM
