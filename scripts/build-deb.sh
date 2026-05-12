@@ -33,7 +33,7 @@ Section: devel
 Priority: optional
 Architecture: $arch
 Maintainer: susu3304 <noreply@github.com>
-Depends: ca-certificates, libc6 (>= 2.31)
+Depends: ca-certificates, libc6 (>= 2.35)
 Homepage: https://github.com/susu3304/InsaneMarmotMatrixLanguage
 Description: insane marmot matrix native runtime
  IMM is a small experimental language for matrix, coordinate, and board

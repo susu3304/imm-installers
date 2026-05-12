@@ -19,7 +19,7 @@ directory to the machine `PATH`. Open a new terminal after installation:
 imm --version
 ```
 
-### Ubuntu
+### Ubuntu 22.04+ amd64
 
 After the first successful Pages deployment, install through APT:
 
