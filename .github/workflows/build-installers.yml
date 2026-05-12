@@ -17,7 +17,7 @@ on:
       - imm-updated
       - imm-released
   schedule:
-    - cron: "17 * * * *"
+    - cron: "*/15 * * * *"
 
 permissions:
   contents: write

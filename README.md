@@ -42,7 +42,7 @@ IMM repository when any of these events happen:
 
 - `repository_dispatch` with type `imm-updated` or `imm-released`
 - manual `workflow_dispatch`
-- hourly scheduled polling as a fallback
+- scheduled polling every 15 minutes as a fallback
 
 The workflow skips publishing if the same upstream commit was already released,
 unless `force` is enabled for a manual run.
