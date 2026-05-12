@@ -208,13 +208,26 @@ jobs:
           SHORT_SHA: ${{ needs.prepare.outputs.short_sha }}
         run: |
           set -euo pipefail
-          gh release create "$RELEASE_TAG" dist/*.deb dist/*.msi \
-            --repo "$GITHUB_REPOSITORY" \
-            --title "$RELEASE_NAME" \
-            --notes "Built from susu3304/InsaneMarmotMatrixLanguage@${UPSTREAM_SHA}. The Windows MSI installs imm.exe and adds it to PATH. The Ubuntu package installs /usr/bin/imm."
+          release_notes="Built from susu3304/InsaneMarmotMatrixLanguage@${UPSTREAM_SHA}. The Windows MSI installs imm.exe and adds it to PATH. The Ubuntu package installs /usr/bin/imm."
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release edit "$RELEASE_TAG" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$RELEASE_NAME" \
+              --notes "$release_notes"
+            gh release upload "$RELEASE_TAG" dist/*.deb dist/*.msi \
+              --repo "$GITHUB_REPOSITORY" \
+              --clobber
+          else
+            gh release create "$RELEASE_TAG" dist/*.deb dist/*.msi \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$RELEASE_NAME" \
+              --notes "$release_notes"
+          fi
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
