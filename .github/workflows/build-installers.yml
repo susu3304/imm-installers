@@ -78,7 +78,7 @@ jobs:
       - name: Check whether release already exists
         id: existing
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FORCE: ${{ inputs.force || 'false' }}
           RELEASE_TAG: ${{ steps.version.outputs.release_tag }}
         run: |
@@ -276,7 +276,7 @@ jobs:
 
       - name: Create GitHub release
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
           RELEASE_NAME: ${{ needs.prepare.outputs.release_name }}
           UPSTREAM_SHA: ${{ needs.prepare.outputs.upstream_sha }}
