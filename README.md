@@ -48,6 +48,17 @@ imm --version
 The formula installs `imm` into Homebrew's `bin` directory, which is already on
 `PATH` for a normal Homebrew setup.
 
+### VS Code
+
+Download `imm-vscode-*.vsix` from the latest GitHub release, then install it:
+
+```bash
+code --install-extension imm-vscode-0.1.1.vsix
+```
+
+The extension provides `.imm` syntax highlighting, snippets, and editor
+commands for checking, formatting, running, probe, and law suite workflows.
+
 ## Automation
 
 `.github/workflows/build-installers.yml` rebuilds installers from the upstream

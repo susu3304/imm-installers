@@ -199,6 +199,38 @@ jobs:
           path: dist/imm-macos-${{ matrix.artifact_arch }}.tar.gz
           if-no-files-found: error
 
+  vscode-extension:
+    runs-on: ubuntu-latest
+    needs: prepare
+    if: needs.prepare.outputs.should_release == 'true'
+    steps:
+      - name: Checkout packaging repository
+        uses: actions/checkout@v4
+        with:
+          path: packaging
+
+      - name: Checkout IMM source
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.IMM_REPOSITORY }}
+          ref: ${{ needs.prepare.outputs.upstream_sha }}
+          path: imm-src
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Build VS Code extension
+        run: packaging/scripts/build-vscode-extension.sh imm-src dist
+
+      - name: Upload VS Code extension
+        uses: actions/upload-artifact@v4
+        with:
+          name: imm-vscode-extension
+          path: dist/*.vsix
+          if-no-files-found: error
+
   publish:
     runs-on: ubuntu-latest
     needs:
@@ -206,6 +238,7 @@ jobs:
       - linux-deb
       - windows-msi
       - macos-tarball
+      - vscode-extension
     if: needs.prepare.outputs.should_release == 'true'
     environment:
       name: github-pages
@@ -250,17 +283,17 @@ jobs:
           SHORT_SHA: ${{ needs.prepare.outputs.short_sha }}
         run: |
           set -euo pipefail
-          release_notes="Built from susu3304/InsaneMarmotMatrixLanguage@${UPSTREAM_SHA}. Windows MSI installs imm.exe and adds it to PATH. Ubuntu APT installs /usr/bin/imm. macOS tarballs feed the Homebrew tap."
+          release_notes="Built from susu3304/InsaneMarmotMatrixLanguage@${UPSTREAM_SHA}. Windows MSI installs imm.exe and adds it to PATH. Ubuntu APT installs /usr/bin/imm. macOS tarballs feed the Homebrew tap. The VS Code extension is published as a .vsix asset."
           if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release edit "$RELEASE_TAG" \
               --repo "$GITHUB_REPOSITORY" \
               --title "$RELEASE_NAME" \
               --notes "$release_notes"
-            gh release upload "$RELEASE_TAG" dist/*.deb dist/*.msi dist/*.tar.gz \
+            gh release upload "$RELEASE_TAG" dist/*.deb dist/*.msi dist/*.tar.gz dist/*.vsix \
               --repo "$GITHUB_REPOSITORY" \
               --clobber
           else
-            gh release create "$RELEASE_TAG" dist/*.deb dist/*.msi dist/*.tar.gz \
+            gh release create "$RELEASE_TAG" dist/*.deb dist/*.msi dist/*.tar.gz dist/*.vsix \
               --repo "$GITHUB_REPOSITORY" \
               --title "$RELEASE_NAME" \
               --notes "$release_notes"

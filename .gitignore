@@ -3,6 +3,7 @@ dist/
 tmp/
 *.msi
 *.deb
+*.vsix
 *.zip
 *.tar.gz
 *.sig
