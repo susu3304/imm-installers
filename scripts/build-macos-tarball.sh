@@ -33,6 +33,12 @@ cleanup() {
 }
 trap cleanup EXIT
 
-mkdir -p "$stage/bin"
-install -m 755 "$source_dir/target/$target/release/imm-native" "$stage/bin/imm"
-tar -C "$stage" -czf "$out_dir/imm-macos-${artifact_arch}.tar.gz" bin/imm
+package_root="$stage/imm"
+mkdir -p "$package_root/bin"
+install -m 755 "$source_dir/target/$target/release/imm-native" "$package_root/bin/imm"
+tar -C "$stage" -czf "$out_dir/imm-macos-${artifact_arch}.tar.gz" imm/bin/imm
+
+if ! tar -tzf "$out_dir/imm-macos-${artifact_arch}.tar.gz" | grep -qx "imm/bin/imm"; then
+  echo "macOS tarball is missing imm/bin/imm" >&2
+  exit 1
+fi
